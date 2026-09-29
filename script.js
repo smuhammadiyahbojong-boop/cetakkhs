@@ -1,3 +1,9 @@
+/* === KONFIGURASI ===
+   Tempel URL aplikasi web Apps Script (berakhiran /exec) di bawah ini bila
+   index.html / script.js / style.css di-host terpisah (GitHub Pages, dll).
+   Biarkan kosong bila dibuka langsung dari URL Apps Script. */
+const API_URL = 'https://script.google.com/macros/s/AKfycbxgCnkM7ON0EqgTWjheagxtPv4G28YY9cobZb8XdAlK2hZN70VCznJT9P2QfhOyXsJN/exec';
+
 // <PURE>
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const norm = s => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -175,7 +181,25 @@ function legerHTML(st, kelas, g) {
 
 /* ================= UI ================= */
 const $ = id => document.getElementById(id);
-const gs = (fn, ...a) => new Promise((ok, er) => google.script.run.withSuccessHandler(ok).withFailureHandler(e => er(e)) [fn](...a));
+
+const apiCall = async (fn, args, retry) => {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // tanpa preflight CORS
+    body: JSON.stringify({ fn, args, pin: localStorage.getItem('khs_pin') || '' })
+  });
+  const j = await res.json();
+  if (j.auth && !retry) {
+    const p = prompt('Masukkan PIN akses sistem KHS:');
+    if (p === null) throw new Error('PIN diperlukan.');
+    localStorage.setItem('khs_pin', p);
+    return apiCall(fn, args, true);
+  }
+  if (!j.ok) { if (j.auth) localStorage.removeItem('khs_pin'); throw new Error(j.error || 'Gagal memanggil server'); }
+  return j.data;
+};
+const gs = (fn, ...a) => API_URL ? apiCall(fn, a) :
+  new Promise((ok, er) => google.script.run.withSuccessHandler(ok).withFailureHandler(er)[fn](...a));
 let S = null, KHS = null, legerParsed = null, tplParsed = [];
 const msg = (el, t, c) => { $(el).innerHTML = `<div class="msg ${c || 'in'}">${esc(t)}</div>`; };
 const busy = (b, on) => { b.disabled = on; };
