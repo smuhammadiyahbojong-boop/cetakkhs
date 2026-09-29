@@ -1,0 +1,63 @@
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:#f3f5f9;color:#1f2937;font-size:14px}
+header{background:#0b5d3b;color:#fff;padding:12px 16px}
+header h1{margin:0;font-size:18px} header small{opacity:.85}
+nav{display:flex;gap:4px;flex-wrap:wrap;background:#fff;padding:8px 12px;border-bottom:1px solid #d9dee7;position:sticky;top:0;z-index:5}
+nav button{border:0;background:#eef1f6;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px}
+nav button.on{background:#0b5d3b;color:#fff}
+main{max-width:1100px;margin:0 auto;padding:14px}
+.card{background:#fff;border:1px solid #dfe3ea;border-radius:10px;padding:14px;margin-bottom:14px}
+.card h2{margin:0 0 8px;font-size:15px}
+button.p,.btn{background:#0b5d3b;color:#fff;border:0;border-radius:8px;padding:9px 14px;cursor:pointer;font-size:13px}
+button.s{background:#e5e9f0;border:0;border-radius:8px;padding:8px 12px;cursor:pointer;font-size:13px}
+button:disabled{opacity:.5;cursor:wait}
+input[type=text],input[type=number],select{padding:7px 8px;border:1px solid #c9cfda;border-radius:6px;font-size:13px;max-width:100%}
+label{display:block;font-size:12px;color:#556;margin:8px 0 2px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:0 12px}
+.grid input{width:100%}
+.tw{overflow:auto;max-height:65vh;border:1px solid #dfe3ea;border-radius:8px}
+table.d{border-collapse:collapse;width:100%;font-size:12px}
+table.d th,table.d td{border:1px solid #dfe3ea;padding:4px 6px;text-align:left;white-space:nowrap}
+table.d th{background:#eef2f7;position:sticky;top:0}
+table.d td input[type=text],table.d td input[type=number],table.d td select{width:100%;min-width:60px}
+.msg{padding:8px 10px;border-radius:8px;margin-top:8px;font-size:13px;white-space:pre-wrap}
+.ok{background:#e7f6ec;color:#14532d}.er{background:#fdecec;color:#7f1d1d}.in{background:#eaf1fb;color:#1e3a8a}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.low{color:#b91c1c;font-weight:600}
+.sec{display:none}.sec.on{display:block}
+#prev{display:none;background:#8a8f99;min-height:100vh}
+body.previewing #app{display:none} body.previewing #prev{display:block}
+#pbar{position:sticky;top:0;background:#111827;color:#fff;padding:8px 12px;display:flex;gap:8px;align-items:center;z-index:9}
+#pages{padding:14px 0}
+.khs-page,.leg-page{background:#fff;width:19cm;max-width:100%;margin:0 auto 14px;padding:0.6cm 0.4cm;font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;color:#000}
+.khs-page{min-height:26cm}
+.leg-page{width:32cm;font-size:8pt}
+.kop{display:flex;align-items:center;gap:8px;border-bottom:3px double #000;padding-bottom:4px;text-align:center}
+.kop .lg{width:2.2cm;height:2.2cm;display:flex;align-items:center;justify-content:center}
+.kop .lg img{max-width:100%;max-height:100%}
+.kop .tx{flex:1;line-height:1.25}
+.kop .b1{font-size:10.5pt;font-weight:bold}.kop .nm{font-size:16pt;font-weight:bold}.kop .sm{font-size:8pt}
+.jd{text-align:center;font-weight:bold;margin:10px 0 0;font-size:12pt}
+.ta{text-align:center;margin-bottom:6px}
+table.inf{width:100%;border-collapse:collapse;margin:4px 0 8px}
+table.inf td{padding:1px 3px;vertical-align:top}
+table.kh{width:100%;border-collapse:collapse}
+table.kh th,table.kh td{border:1px solid #000;padding:2px 5px}
+table.kh th{text-align:center}
+table.kh td.c{text-align:center}
+table.kh tr.gr td{font-weight:bold}
+table.kh tr.sp td{height:6px;padding:0}
+table.sg{width:100%;border-collapse:collapse;margin-top:14px;text-align:center}
+table.sg td{width:33%;vertical-align:top;padding:0}
+.fn{font-size:8pt;margin-top:12px;line-height:1.35}
+table.lg{border-collapse:collapse;width:100%}
+table.lg th,table.lg td{border:1px solid #000;padding:1px 3px;text-align:center}
+table.lg td.n{text-align:left;white-space:nowrap}
+@media print{
+  body{background:#fff}
+  #pbar,.noprint{display:none!important}
+  #prev{background:#fff}
+  #pages{padding:0}
+  .khs-page,.leg-page{margin:0;width:100%;padding:0;box-shadow:none;page-break-after:always;min-height:0}
+  .khs-page:last-child,.leg-page:last-child{page-break-after:auto}
+}

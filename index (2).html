@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sistem KHS</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="style.css">
+<style id="pageStyle">@page{size:8.5in 14in;margin:1.2cm 1cm 1.2cm 1.6cm}</style>
+</head>
+<body>
+<div id="app">
+<header><h1>Sistem KHS &amp; Leger Nilai</h1><small>SMK Muhammadiyah Bojong &middot; data tersimpan di Google Spreadsheet</small></header>
+<nav id="nav"></nav>
+<main>
+
+<section class="sec" id="t-mulai">
+  <div class="card">
+    <h2>Impor Leger (sekali di awal)</h2>
+    <p>Unggah file Leger (.xls/.xlsx) untuk mengisi daftar siswa, kelas, wali kelas, dan nilai yang sudah ada. <b>Isi sheet Leger akan diganti.</b></p>
+    <input type="file" id="fLeger" accept=".xls,.xlsx">
+    <div id="legerInfo"></div>
+    <label style="display:block;margin:8px 0"><input type="checkbox" id="cNilaiLama"> Ikutkan nilai yang sudah ada di file leger (biarkan kosong bila nilai akan diisi dari template)</label>
+    <div class="row"><button class="p" id="btnLeger" disabled>Impor ke Leger</button></div>
+    <div id="legerMsg"></div>
+    <p style="font-size:12px;color:#556">Catatan: nilai 0 di leger lama dianggap kosong. Jumlah &amp; peringkat dihitung ulang otomatis.</p>
+  </div>
+</section>
+
+<section class="sec" id="t-nilai">
+  <div class="card">
+    <h2>Unggah Template Nilai</h2>
+    <p>Unggah template nilai per mata pelajaran (boleh beberapa file sekaligus). Nilai otomatis masuk ke Leger.</p>
+    <input type="file" id="fNilai" accept=".xls,.xlsx" multiple>
+    <div id="nilaiList"></div>
+  </div>
+</section>
+
+<section class="sec" id="t-leger">
+  <div class="card">
+    <h2>Leger Nilai</h2>
+    <div class="row">
+      <select id="lgKelas"></select>
+      <button class="s" id="lgMuat">Muat</button>
+      <button class="p" id="lgCetak">Cetak Leger</button>
+      <button class="s" id="lgHitung">Hitung Ulang</button>
+      <a class="btn" id="lgSheet" target="_blank" style="text-decoration:none;background:#1a73e8">Buka Spreadsheet</a>
+    </div>
+    <div class="tw"><table class="d" id="lgTabel"></table></div>
+  </div>
+</section>
+
+<section class="sec" id="t-khs">
+  <div class="card">
+    <h2>Cetak KHS</h2>
+    <div class="row">
+      <select id="khKelas"></select>
+      <button class="s" id="khMuat">Tampilkan Siswa</button>
+    </div>
+    <div class="row">
+      <input type="text" id="khCari" placeholder="Cari nama...">
+      <button class="s" id="khAll">Pilih Semua</button>
+      <button class="s" id="khNone">Kosongkan</button>
+      <button class="p" id="khCetak">Pratinjau &amp; Cetak Terpilih</button>
+    </div>
+    <div class="tw"><table class="d" id="khTabel"></table></div>
+  </div>
+</section>
+
+<section class="sec" id="t-atur">
+  <div class="card"><h2>Identitas Sekolah &amp; KHS</h2><div class="grid" id="fSet"></div>
+    <div class="row">
+      <div><label>Logo kiri</label><input type="file" accept="image/*" data-logo="LOGO_KIRI"></div>
+      <div><label>Logo kanan</label><input type="file" accept="image/*" data-logo="LOGO_KANAN"></div>
+      <div><label>Tanda tangan Kepala Sekolah</label><input type="file" accept="image/*" data-logo="TTD_KEPSEK"></div>
+    </div>
+    <div id="logoPrev" class="row"></div>
+  </div>
+  <div class="card"><h2>Mata Pelajaran &amp; KKTP</h2>
+    <div class="tw"><table class="d" id="tMapel"></table></div>
+    <div class="row"><button class="s" id="addMapel">+ Tambah Mapel</button></div>
+    <p style="font-size:12px;color:#556">Urutan tabel = urutan di KHS &amp; kolom Leger. Kelompok: A Umum, B Kejuruan, C Ciri Khusus.</p>
+  </div>
+  <div class="card"><h2>Kelas &amp; Wali Kelas</h2>
+    <div class="tw"><table class="d" id="tKelas"></table></div>
+    <div class="row"><button class="s" id="addKelas">+ Tambah Kelas</button></div>
+  </div>
+  <div class="row"><button class="p" id="simpanAtur">Simpan Semua Pengaturan</button></div>
+  <div id="aturMsg"></div>
+</section>
+
+</main>
+</div>
+
+<div id="prev">
+  <div id="pbar"><button class="p" onclick="window.print()">Cetak / Simpan PDF</button><button class="s" id="pClose">Tutup</button><span id="pInfo"></span></div>
+  <div id="pages"></div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
