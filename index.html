@@ -18,7 +18,7 @@
 <section class="sec" id="t-mulai">
   <div class="card">
     <h2>Impor Leger (sekali di awal)</h2>
-    <p>Unggah file Leger (.xls/.xlsx) untuk mengisi daftar siswa, kelas, wali kelas, dan nilai yang sudah ada. <b>Isi sheet Leger akan diganti.</b></p>
+    <p>Unggah file Leger (.xls/.xlsx) untuk mengisi daftar siswa, kelas, wali kelas, dan nilai yang sudah ada. Bisa diulang untuk X, XI, dan XII (satu file per tingkat). <b>Hanya kelas yang ada di file ini yang diganti</b>; kelas lain tetap.</p>
     <input type="file" id="fLeger" accept=".xls,.xlsx">
     <div id="legerInfo"></div>
     <label style="display:block;margin:8px 0"><input type="checkbox" id="cNilaiLama"> Ikutkan nilai yang sudah ada di file leger (biarkan kosong bila nilai akan diisi dari template)</label>
@@ -80,7 +80,7 @@
   <div class="card"><h2>Mata Pelajaran &amp; KKTP</h2>
     <div class="tw"><table class="d" id="tMapel"></table></div>
     <div class="row"><button class="s" id="addMapel">+ Tambah Mapel</button></div>
-    <p style="font-size:12px;color:#556">Urutan tabel = urutan di KHS &amp; kolom Leger. Kelompok: A Umum, B Kejuruan, C Ciri Khusus.</p>
+    <p style="font-size:12px;color:#556">Urutan tabel = urutan di KHS &amp; kolom Leger. Kelompok: A Umum, B Kejuruan, C Ciri Khusus. Tingkat: isi X, XI, XII dipisah koma (contoh X,XI) atau Semua &mdash; KHS dan Leger hanya menampilkan mapel sesuai tingkat kelasnya.</p>
   </div>
   <div class="card"><h2>Kelas &amp; Wali Kelas</h2>
     <div class="tw"><table class="d" id="tKelas"></table></div>
