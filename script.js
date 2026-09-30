@@ -2,13 +2,28 @@
    Tempel URL aplikasi web Apps Script (berakhiran /exec) di bawah ini bila
    index.html / script.js / style.css di-host terpisah (GitHub Pages, dll).
    Biarkan kosong bila dibuka langsung dari URL Apps Script. */
-const API_URL = 'https://script.google.com/macros/s/AKfycbxgCnkM7ON0EqgTWjheagxtPv4G28YY9cobZb8XdAlK2hZN70VCznJT9P2QfhOyXsJN/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbz3duPipMZfdPX63CLmIsxcuVv7h9afHcsLhRbbRABO5aN46I2TzqEIHchsd3riNdy1/exec';
 
 // <PURE>
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const norm = s => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/g, '');
-const kkey = s => String(s == null ? '' : s).toUpperCase().replace(/[\s\-]/g, '').replace(/([A-Z])I$/, (m, a) => a + '1');
-const cleanKelas = s => String(s == null ? '' : s).replace(/\s+/g, ' ').trim().replace(/ I$/, ' 1');
+const tingkatOf = s => {
+  const m = String(s == null ? '' : s).trim().toUpperCase().match(/^[XIVL1]+/);
+  if (!m) return '';
+  const t = m[0].replace(/[L1]/g, 'I');
+  return t === 'X' || t === 'XI' || t === 'XII' ? t : '';
+};
+const cleanKelas = s => {
+  let v = String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
+  const m = v.toUpperCase().match(/^[XIVL1]+/), t = tingkatOf(v);
+  if (m && t) v = t + v.slice(m[0].length);
+  return v.replace(/ I$/i, ' 1');
+};
+const kkey = s => cleanKelas(s).toUpperCase().replace(/[\s\-]/g, '');
+const cocok = (m, t) => {
+  const x = String(m.tingkat || 'Semua').toUpperCase().replace(/\s/g, '');
+  return !t || x === 'SEMUA' || x === '' || x.split(',').indexOf(t) >= 0;
+};
 const isNum = v => v !== '' && v !== null && v !== undefined && !isNaN(v) && typeof v !== 'boolean';
 const sheetRows = (wb, sn) => XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: null, raw: true });
 const txt = v => (v == null ? '' : String(v)).trim();
@@ -56,7 +71,8 @@ function parseTemplate(wb) {
 
 /** Parse leger lama: {siswa[], kelas[]} */
 function parseLeger(wb) {
-  const info = {}, siswa = [], kelasUsed = {};
+  const info = {}, siswa = [], kelasUsed = {}, peringatan = [];
+  const cariInfo = k => info[kkey(k)] ? Object.assign({ exact: true }, info[kkey(k)]) : (info[kkey(k).replace(/\d+$/, '')] ? Object.assign({ exact: false }, info[kkey(k).replace(/\d+$/, '')]) : {});
   wb.SheetNames.forEach(sn => {
     const A = sheetRows(wb, sn);
     const h = A[0] || [];
@@ -87,9 +103,14 @@ function parseLeger(wb) {
       const n = txt(v); if (c < 4 || !n) return;
       if (/sakit/i.test(n)) cS = c; else if (/izin|ijin/i.test(n)) cI = c; else if (/tanpa|alpa/i.test(n)) cA = c; else mCols.push([c, n]);
     });
-    const inf = info[kkey(kelas)] || {};
-    const kelasName = inf.kelas || cleanKelas(kelas);
-    kelasUsed[kkey(kelas)] = { kelas: kelasName, wali: inf.wali || wali, bidang: inf.bidang || '', program: inf.program || '', kosentrasi: inf.kosentrasi || '' };
+    // nama kelas: utamakan nama sheet (sel KELAS sering salah salin), cadangan sel KELAS
+    const kelasName = cleanKelas(tingkatOf(sn) && /\s/.test(sn.trim()) ? sn : kelas);
+    const inf = cariInfo(kelasName);
+    const waliPakai = inf.wali || wali;
+    const fb = inf.exact === false;
+    if (kelasUsed[kkey(kelasName)]) peringatan.push(`Kelas "${kelasName}" muncul di lebih dari satu sheet (${sn}); siswa digabung.`);
+    if (inf.exact !== false && inf.wali && wali && norm(inf.wali) !== norm(wali)) peringatan.push(`${kelasName}: wali di sheet kelas "${wali}" berbeda dengan sheet rekap "${inf.wali}" (dipakai: ${inf.wali}).`);
+    kelasUsed[kkey(kelasName)] = { kelas: kelasName, wali: waliPakai, waliSheet: wali, fb, bidang: inf.bidang || '', program: inf.program || '', kosentrasi: inf.kosentrasi || '' };
     for (let i = nr + 1; i < A.length; i++) {
       const r = A[i];
       if (!isNum(r[0]) || !txt(r[2])) continue;
@@ -99,7 +120,18 @@ function parseLeger(wb) {
       siswa.push({ nis: txt(r[1]), nama: txt(r[2]), kelas: kelasName, nilai, sakit: ab(cS), izin: ab(cI), alpa: ab(cA) });
     }
   });
-  return { siswa, kelas: Object.values(kelasUsed) };
+  // rekap hanya menulis "XII TSM" (tanpa nomor) untuk >1 kelas: pakai wali dari sheet kelas masing-masing
+  const list = Object.values(kelasUsed);
+  list.forEach(k => {
+    if (!k.fb) return;
+    const dasar = kkey(k.kelas).replace(/\d+$/, '');
+    if (list.filter(x => kkey(x.kelas).replace(/\d+$/, '') === dasar).length > 1 && k.waliSheet) {
+      if (norm(k.wali) !== norm(k.waliSheet)) peringatan.push(`${k.kelas}: rekap hanya menulis satu wali untuk beberapa kelas; dipakai wali dari sheet kelas: ${k.waliSheet}.`);
+      k.wali = k.waliSheet;
+    }
+  });
+  list.forEach(k => { delete k.waliSheet; delete k.fb; });
+  return { siswa, kelas: list, peringatan };
 }
 
 /** Cari mapel target dari nama di template */
@@ -233,18 +265,20 @@ $('fLeger').onchange = async e => {
   try {
     const wb = XLSX.read(await f.arrayBuffer(), { type: 'array' });
     legerParsed = parseLeger(wb);
-    $('legerInfo').innerHTML = `<div class="msg in">Terbaca: ${legerParsed.siswa.length} siswa di ${legerParsed.kelas.length} kelas (${legerParsed.kelas.map(k => esc(k.kelas)).join(', ')})</div>`;
+    $('legerInfo').innerHTML = `<div class="msg in">Terbaca: ${legerParsed.siswa.length} siswa di ${legerParsed.kelas.length} kelas\n` +
+      legerParsed.kelas.map(k => `${esc(k.kelas)} \u2014 wali: ${esc(k.wali || '(kosong)')}`).join('\n') + '</div>' +
+      (legerParsed.peringatan.length ? `<div class="msg er">Periksa:\n${esc(legerParsed.peringatan.join('\n'))}</div>` : '');
     $('btnLeger').disabled = !legerParsed.siswa.length;
   } catch (er) { msg('legerInfo', 'Gagal membaca file: ' + er.message, 'er'); }
 };
 $('btnLeger').onclick = async function () {
-  if (!confirm('Isi sheet Leger akan diganti. Lanjutkan?')) return;
+  if (!confirm('Data siswa untuk kelas yang ada di file ini akan diganti. Kelas lain tidak tersentuh. Lanjutkan?')) return;
   busy(this, true);
   try {
     const pay = JSON.parse(JSON.stringify(legerParsed));
     if (!$('cNilaiLama').checked) pay.siswa.forEach(x => x.nilai = {});
     const r = await gs('importLeger', pay);
-    msg('legerMsg', `Berhasil: ${r.siswa} siswa diimpor.` + (r.mapelTidakDikenal.length ? `\nMapel tidak dikenal (dilewati): ${r.mapelTidakDikenal.join(', ')}` : ''), 'ok');
+    msg('legerMsg', `Berhasil: ${r.siswa} siswa diimpor (${r.dipertahankan} siswa kelas lain dipertahankan).` + (r.mapelTidakDikenal.length ? `\nMapel tidak cocok (dilewati): ${r.mapelTidakDikenal.join(', ')}` : '') + `\nCek wali kelas di tab Pengaturan:\n${r.kelas.join('\n')}`, 'ok');
     await load();
   } catch (er) { msg('legerMsg', er.message || String(er), 'er'); }
   busy(this, false);
@@ -265,13 +299,15 @@ function renderTpl() {
   if (!S) return;
   $('nilaiList').innerHTML = tplParsed.map((p, i) => {
     if (p.error || !p.rows.length) return `<div class="card"><b>${esc(p.file)}</b><div class="msg er">${esc(p.error || 'Tidak ada data nilai terbaca')}</div></div>`;
-    const g = guessMapel(p.mapel, S.mapel);
+    const tk = [...new Set(p.rows.map(r => tingkatOf(r.kelas)).filter(Boolean))];
+    const opsi = tk.length === 1 ? S.mapel.filter(m => cocok(m, tk[0])) : S.mapel;
+    const g = guessMapel(p.mapel, opsi);
     const kelasList = [...new Set(p.rows.map(r => r.kelas))].join(', ');
     return `<div class="card" data-i="${i}"><b>${esc(p.file)}</b> <small>(${esc(p.sheet)})</small>
       <div>Mapel terbaca: <b>${esc(p.mapel || '-')}</b> &middot; ${p.rows.length} siswa &middot; ${p.rows.filter(r => r.murni == null).length} belum ada nilai</div>
-      <div>Kelas: ${esc(kelasList)}</div>
+      <div>Kelas: ${esc(kelasList)}${tk.length === 1 ? ' &middot; daftar mapel disesuaikan untuk kelas ' + tk[0] : ''}</div>
       <div class="row"><label style="margin:0">Masuk ke mapel:</label>
-        <select class="tMapel"><option value="">-- pilih --</option>${S.mapel.map(m => `<option ${m.nama === g ? 'selected' : ''}>${esc(m.nama)}</option>`).join('')}</select>
+        <select class="tMapel"><option value="">-- pilih --</option>${opsi.map(m => `<option ${m.nama === g ? 'selected' : ''}>${esc(m.nama)}</option>`).join('')}</select>
         <label style="margin:0">Sumber nilai:</label>
         <select class="tSumber"><option value="murni">Nilai Murni</option><option value="rata">Rata-rata</option></select>
         <label style="margin:0"><input type="checkbox" class="tBaru" ${S.jumlahSiswa ? '' : 'checked'}> tambahkan siswa yang belum ada di Leger</label>
@@ -290,6 +326,7 @@ $('nilaiList').onclick = async e => {
   try {
     const r = await gs('importNilai', { mapel, rows, tambahBaru: card.querySelector('.tBaru').checked });
     out.innerHTML = `<div class="msg ok">Masuk: ${r.updated} nilai diperbarui, ${r.added} siswa baru ditambahkan.</div>` +
+      (r.salahTingkat ? `<div class="msg er">${r.salahTingkat} siswa dilewati karena mapel ini tidak berlaku untuk tingkat kelasnya.</div>` : '') +
       (r.unmatched.length ? `<div class="msg er">Nama tidak ditemukan di Leger (${r.unmatched.length}):\n${esc(r.unmatched.join('\n'))}</div>` : '');
     await load();
   } catch (er) { out.innerHTML = `<div class="msg er">${esc(er.message || er)}</div>`; }
@@ -358,13 +395,13 @@ const LBL = { NAMA_SEKOLAH: 'Nama sekolah', BARIS_1: 'Kop baris 1', BARIS_2: 'Ko
 function renderAtur() {
   $('fSet').innerHTML = Object.keys(LBL).map(k => `<div><label>${LBL[k]}</label><input type="text" data-k="${k}" value="${esc(S.settings[k])}"></div>`).join('');
   $('logoPrev').innerHTML = ['LOGO_KIRI', 'LOGO_KANAN', 'TTD_KEPSEK'].map(k => S.settings[k] ? `<div><small>${k}</small><br><img src="${S.settings[k]}" style="height:50px;border:1px solid #ccc"></div>` : '').join('');
-  $('tMapel').innerHTML = '<tr><th>Kelompok</th><th>Mata Pelajaran</th><th>KKTP</th><th></th></tr>' + S.mapel.map(mapelRow).join('');
+  $('tMapel').innerHTML = '<tr><th>Kelompok</th><th>Mata Pelajaran</th><th>KKTP</th><th>Tingkat</th><th></th></tr>' + S.mapel.map(mapelRow).join('');
   $('tKelas').innerHTML = '<tr><th>Kelas</th><th>Wali Kelas</th><th>NBM Wali</th><th>Bidang Keahlian</th><th>Program Keahlian</th><th>Kosentrasi</th><th>Fase</th><th></th></tr>' + S.kelas.map(kelasRow).join('');
   renderTpl();
 }
-const mapelRow = m => `<tr><td><select>${['A', 'B', 'C'].map(g => `<option ${g === m.kelompok ? 'selected' : ''}>${g}</option>`).join('')}</select></td><td><input type="text" value="${esc(m.nama)}" style="min-width:280px"></td><td><input type="number" value="${m.kktp}" style="width:70px"></td><td><button class="s" onclick="this.closest('tr').remove()">Hapus</button></td></tr>`;
+const mapelRow = m => `<tr><td><select class="mK">${['A', 'B', 'C'].map(g => `<option ${g === m.kelompok ? 'selected' : ''}>${g}</option>`).join('')}</select></td><td><input type="text" class="mN" value="${esc(m.nama)}" style="min-width:280px"></td><td><input type="number" class="mT" value="${m.kktp}" style="width:70px"></td><td><input type="text" class="mG" value="${esc(m.tingkat || 'Semua')}" style="width:110px" placeholder="X,XI,XII"></td><td><button class="s" onclick="this.closest('tr').remove()">Hapus</button></td></tr>`;
 const kelasRow = k => `<tr>${['kelas', 'wali', 'nbm', 'bidang', 'program', 'kosentrasi', 'fase'].map(f => `<td><input type="text" value="${esc(k[f])}"></td>`).join('')}<td><button class="s" onclick="this.closest('tr').remove()">Hapus</button></td></tr>`;
-$('addMapel').onclick = () => $('tMapel').insertAdjacentHTML('beforeend', mapelRow({ kelompok: 'A', nama: '', kktp: 75 }));
+$('addMapel').onclick = () => $('tMapel').insertAdjacentHTML('beforeend', mapelRow({ kelompok: 'A', nama: '', kktp: 75, tingkat: 'Semua' }));
 $('addKelas').onclick = () => $('tKelas').insertAdjacentHTML('beforeend', kelasRow({ kelas: '', wali: '', nbm: '', bidang: '', program: '', kosentrasi: '', fase: 'E' }));
 
 document.querySelectorAll('[data-logo]').forEach(inp => inp.onchange = e => {
@@ -386,7 +423,7 @@ $('simpanAtur').onclick = async function () {
   busy(this, true);
   try {
     document.querySelectorAll('#fSet input').forEach(i => S.settings[i.dataset.k] = i.value);
-    const mapel = [...$('tMapel').querySelectorAll('tr')].slice(1).map(tr => ({ kelompok: tr.querySelector('select').value, nama: tr.querySelector('input[type=text]').value, kktp: tr.querySelector('input[type=number]').value }));
+    const mapel = [...$('tMapel').querySelectorAll('tr')].slice(1).map(tr => ({ kelompok: tr.querySelector('.mK').value, nama: tr.querySelector('.mN').value, kktp: tr.querySelector('.mT').value, tingkat: tr.querySelector('.mG').value }));
     const kelas = [...$('tKelas').querySelectorAll('tr')].slice(1).map(tr => { const i = tr.querySelectorAll('input'); return { kelas: i[0].value, wali: i[1].value, nbm: i[2].value, bidang: i[3].value, program: i[4].value, kosentrasi: i[5].value, fase: i[6].value }; });
     await gs('saveSettings', S.settings); await gs('saveKelas', kelas); await gs('saveMapel', mapel);
     await load(); msg('aturMsg', 'Pengaturan tersimpan.', 'ok');
